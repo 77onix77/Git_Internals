@@ -116,6 +116,25 @@ fun tree(byteArray: ByteArray) {
 fun main() {
     println("Enter .git directory location:")
     val path = readln()
+    println("Enter command:")
+    val comand = readln()
+    when (comand) {
+        "cat-file" -> catFile(path)
+        "list-branches" -> listBranches(path)
+    }
+}
+
+fun listBranches(path: String) {
+    val fullPath = "$path\\refs\\heads"
+    val listFile = (File(fullPath).list()?.sorted())
+    val head = File("$path\\HEAD").readText().split("/").last().trim()
+    for (el in listFile!!) {
+        if (el == head) println("* $el")
+        else println("  $el")
+    }
+}
+
+fun catFile(path: String) {
     println("Enter git object hash:")
     val hash = readln()
     val fullPath = "$path\\objects\\${hash.substring(0, 2)}\\${hash.substring(2)}"
