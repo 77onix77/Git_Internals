@@ -61,6 +61,58 @@ fun timeMod(str: String): String {
     return res
 }
 
+fun tree(byteArray: ByteArray) {
+    println("*TREE*")
+    var char0 = 0
+    var res = ""
+    var option = 0
+    var count = 0
+    val size = mutableListOf<String>()
+    val name = mutableListOf<String>()
+    val hash = mutableListOf<String>()
+    for (byte in byteArray) {
+        if (byte.toChar() == Char(0)) {
+            char0++
+            if (char0 == 1) {
+                option = 1
+                continue
+            }
+        }
+        if (char0 == 0) continue
+        when (option) {
+            1 -> {
+                if (byte.toChar() == ' ') {
+                    option = 2
+                    size.add(res)
+                    res = ""
+                    continue
+                } else res += byte.toChar()
+            }
+            2 -> {
+                if (byte.toChar() == Char(0)) {
+                    option = 3
+                    name.add(res)
+                    res = ""
+                    continue
+                } else res += byte.toChar()
+            }
+            3 -> {
+                res += String.format("%02x", byte)
+                count++
+                if (count == 20) {
+                    option = 1
+                    hash.add(res)
+                    res = ""
+                    count = 0
+                }
+            }
+        }
+    }
+    for (i in 0..name.lastIndex) {
+        println("${size[i]} ${hash[i]} ${name[i]}")
+    }
+}
+
 fun main() {
     println("Enter .git directory location:")
     val path = readln()
@@ -78,6 +130,6 @@ fun main() {
     val listStr = content.split('\n').toMutableList()
     if (listStr[0].contains("blob")) blob(listStr)
     if (listStr[0].contains("commit")) commit(listStr)
-    
+    if (listStr[0].contains("tree")) tree(res)
 
 }
