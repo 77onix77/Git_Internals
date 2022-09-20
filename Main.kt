@@ -30,7 +30,7 @@ fun commit(listStr: MutableList<String>) {
         }
     }
     for (el in listInd) listStr.removeAt(el)
-    for (i in 1..listStr.lastIndex - 1) {
+    for (i in 1 until listStr.lastIndex) {
         if (listStr[i].isEmpty()) {
             println("commit message:")
             continue
@@ -52,13 +52,13 @@ fun commit(listStr: MutableList<String>) {
 fun timeMod(str: String): String {
     val list = str.split(" ")
     val t = Instant.ofEpochSecond(list[list.lastIndex - 1].toLong()).atZone(ZoneOffset.of(list[list.lastIndex])).format(
-        DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss xxx"))
+        DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss xxx")
+    )
     var time = t.toString()
     time = time.replace("T", " ")
     time = time.replace("Z", "")
-    val res = if (list[0] == "author:") "original timestamp: $time"
+    return if (list[0] == "author:") "original timestamp: $time"
     else "commit timestamp: $time"
-    return res
 }
 
 fun tree(byteArray: ByteArray) {
@@ -71,7 +71,7 @@ fun tree(byteArray: ByteArray) {
     val name = mutableListOf<String>()
     val hash = mutableListOf<String>()
     for (byte in byteArray) {
-        if (byte.toChar() == Char(0)) {
+        if (byte.toInt().toChar() == Char(0)) {
             char0++
             if (char0 == 1) {
                 option = 1
@@ -81,20 +81,20 @@ fun tree(byteArray: ByteArray) {
         if (char0 == 0) continue
         when (option) {
             1 -> {
-                if (byte.toChar() == ' ') {
+                if (byte.toInt().toChar() == ' ') {
                     option = 2
                     size.add(res)
                     res = ""
                     continue
-                } else res += byte.toChar()
+                } else res += byte.toInt().toChar()
             }
             2 -> {
-                if (byte.toChar() == Char(0)) {
+                if (byte.toInt().toChar() == Char(0)) {
                     option = 3
                     name.add(res)
                     res = ""
                     continue
-                } else res += byte.toChar()
+                } else res += byte.toInt().toChar()
             }
             3 -> {
                 res += String.format("%02x", byte)
@@ -117,10 +117,54 @@ fun main() {
     println("Enter .git directory location:")
     val path = readln()
     println("Enter command:")
-    val comand = readln()
-    when (comand) {
+    when (readln()) {
         "cat-file" -> catFile(path)
         "list-branches" -> listBranches(path)
+        "log" -> log(path)
+    }
+}
+
+fun log(path: String) {
+    println("Enter branch name:")
+    val name = readln()
+    val hash = File("$path\\refs\\heads\\$name").readText().trim()
+    logCommit(path,hash)
+}
+
+fun logCommit(path: String, hash: String, merged: Boolean = false) {
+    val fullPath = "$path\\objects\\${hash.substring(0, 2)}\\${hash.substring(2)}"
+    val file = File(fullPath)
+    val arrayByte = file.readBytes()
+    val decompressor = Inflater()
+    decompressor.setInput(arrayByte)
+    val res = ByteArray(1000)
+    val str = decompressor.inflate(res)
+    decompressor.end()
+    val content = String(res,0, str).replace(Char(0), '\n')
+    val listStr = content.split('\n').toMutableList()
+    val hashParents = mutableListOf<String>()
+    var strCommiter = ""
+    var coment = ""
+    for(el in listStr) {
+        if (el.contains("parent ")) hashParents += el.substringAfter(" ").trim()
+        if (el.contains("committer ")) strCommiter = el.substringAfter("committer ")
+        if (el.isEmpty()) {
+            for ( i in listStr.indexOf(el) + 1..listStr.lastIndex) coment += "${listStr[i]}\n"
+        break
+        }
+    }
+    strCommiter = strCommiter.replace("<", "")
+    strCommiter = strCommiter.replace(">", "")
+    strCommiter = strCommiter.replace(Regex("\\d{10} [-|+]\\d{4}"), timeMod(strCommiter))
+    println("Commit: $hash" + if (merged) " (merged)" else "")
+    println(strCommiter)
+    println(coment.trim()
+    )
+    println()
+    //println(content)
+    if (hashParents.size > 1) logCommit(path,hashParents[1], true)
+    if (hashParents.isNotEmpty() && !merged) {
+        logCommit(path, hashParents[0])
     }
 }
 
